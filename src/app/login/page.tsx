@@ -7,10 +7,12 @@ import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -18,29 +20,54 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!username || !password) {
-      setError("Please enter username and password.");
+    if (!email || !password) {
+      setError("Please enter email and password.");
       return;
     }
     setLoading(true);
     try {
+      console.log("Attempting Firebase signIn for:", email);
+      let userCred;
+      try {
+        userCred = await signInWithEmailAndPassword(auth, email, password);
+        console.log("Firebase signIn success:", userCred.user?.email);
+      } catch (err: any) {
+        console.error("Firebase signIn error:", err);
+        setError(err?.message || "Firebase sign-in failed.");
+        return;
+      }
+
+      const idToken = await userCred.user.getIdToken();
+      console.log("Obtained idToken (truncated):", idToken?.slice?.(0, 20));
+
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        // ensure browser stores HttpOnly cookie from server
+        credentials: "include",
       });
+
+      const text = await res.text();
+      console.log("/api/auth/login response:", res.status, text);
+
       if (res.ok) {
         // cookie is set by server (httpOnly). Redirect to dashboard.
+        console.log("Login successful, redirecting to /dashboard");
         router.push("/dashboard");
-      } else if (res.status === 401) {
-        setError("Invalid credentials.");
-        router.replace("/login"); // redirect on failure as requested
       } else {
-        const payload = await res.json().catch(() => ({}));
-        setError(payload?.message || "Login failed.");
+        let payload: any = {};
+        try {
+          payload = JSON.parse(text || "{}");
+        } catch (_) {
+          payload = { message: text };
+        }
+        setError(`Server: ${res.status} — ${payload?.message || text || "Login failed."}`);
       }
-    } catch (err) {
-      setError("Network error.");
+    } catch (err: any) {
+      console.error("Unexpected login error:", err);
+      setError(err?.message || "Login failed.");
     } finally {
       setLoading(false);
     }
@@ -53,12 +80,12 @@ export default function LoginPage() {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <TextField
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             fullWidth
             margin="normal"
-            inputProps={{ autoComplete: "username" }}
+            inputProps={{ autoComplete: "email" }}
           />
           <TextField
             label="Password"

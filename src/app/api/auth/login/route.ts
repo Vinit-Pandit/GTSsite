@@ -1,52 +1,61 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { db } from "@/lib/firebaseAdmin";
+import admin from "firebase-admin";
 import { signToken } from "@/lib/auth";
+import "@/lib/firebaseAdmin"; // Ensure Firebase Admin is initialized
+
+// IMPORTANT: admin must already be initialized in firebaseAdmin.ts
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { username, password } = body ?? {};
+    const authHeader = request.headers.get("authorization");
 
-    if (!username || !password) {
-      return NextResponse.json({ message: "Missing credentials" }, { status: 400 });
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { message: "Missing Authorization header" },
+        { status: 401 }
+      );
     }
 
-    // Replace mock DB lookup with Firestore query
-    const usersQuery = await db.collection("users").where("username", "==", username).limit(1).get();
-    if (usersQuery.empty) {
-      return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
-    }
+    const idToken = authHeader.split("Bearer ")[1];
 
-    const userDoc = usersQuery.docs[0];
-    console.log(userDoc.data());
-    const user = { id: userDoc.id, ...(userDoc.data() as any) };
+    // ✅ Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
 
-    // Plain-text password comparison against stored "password" field
-    if (password !== user.password) {
-      return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
-    }
+    // You now have a VERIFIED user
+    const userId = decodedToken.uid;
+    const email = decodedToken.email;
 
-    // sign token
-    const token = signToken({ sub: user.id, username: user.username });
+    // (Optional) issue your own app token
+    const token = signToken({
+      sub: userId,
+      email,
+    });
 
-    // set httpOnly cookie
     const res = NextResponse.json({ ok: true });
-    const cookieOptions = [
+
+    const cookieParts = [
       `token=${token}`,
       `HttpOnly`,
       `Path=/`,
       `Max-Age=${60 * 60 * 24 * 7}`, // 7 days
       `SameSite=Lax`,
-      // Secure should be enabled in production (HTTPS)
     ];
-    // Only set Secure in production
-    if (process.env.NODE_ENV === "production") cookieOptions.push("Secure");
 
-    res.headers.set("Set-Cookie", cookieOptions.join("; "));
+    if (process.env.NODE_ENV === "production") {
+      cookieParts.push("Secure");
+    }
+
+    res.headers.set("Set-Cookie", cookieParts.join("; "));
     return res;
   } catch (err) {
-    console.log(err)
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error(err);
+    return NextResponse.json(
+      { message: "Invalid or expired token" },
+      { status: 401 }
+    );
   }
 }
+
+export const config = {
+  runtime: "nodejs",
+};

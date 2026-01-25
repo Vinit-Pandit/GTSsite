@@ -1,4 +1,5 @@
 import jwt, {SignOptions} from "jsonwebtoken";
+import { NextRequest } from "next/server";
 
 /**
  * Extract a token from a Cookie header string.
@@ -35,6 +36,19 @@ export function verifyToken(token: string): any | null {
 	} catch (err) {
 		return null;
 	}
+}
+
+/**
+ * Extract and verify token from NextRequest.
+ * Returns the decoded payload on success, or null on failure.
+ */
+export function getUserFromRequest(request: NextRequest): any | null {
+	const cookieToken = request.cookies.get("token")?.value ?? null;
+	const authHeader = request.headers.get("authorization") ?? "";
+	const bearerToken = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7).trim() : null;
+	const token = cookieToken || bearerToken;
+	if (!token) return null;
+	return verifyToken(token);
 }
 
 /**

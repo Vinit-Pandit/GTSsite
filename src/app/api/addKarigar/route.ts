@@ -1,7 +1,14 @@
 import { db } from "@/lib/firebaseAdmin";
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import type { NextRequest } from "next/server";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+	const user = getUserFromRequest(request);
+	if (!user) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
+
 	// Parse body
 	const body = await request.json().catch(() => null);
 	if (!body) {

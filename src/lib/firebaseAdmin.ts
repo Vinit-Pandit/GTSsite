@@ -1,10 +1,23 @@
-import { initializeApp, cert, getApps, ServiceAccount } from "firebase-admin/app";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import serviceAccount from "./firebaseAdmin/gtsdatabase-49060-firebase-adminsdk-fbsvc-d07b322550.json";
+
+// Optional but recommended: fail fast if env vars are missing
+if (
+  !process.env.FIREBASE_PROJECT_ID ||
+  !process.env.FIREBASE_CLIENT_EMAIL ||
+  !process.env.FIREBASE_PRIVATE_KEY
+) {
+  throw new Error("Missing Firebase Admin environment variables");
+}
 
 if (!getApps().length) {
   initializeApp({
-    credential: cert(serviceAccount as ServiceAccount),
+    credential: cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // Convert escaped newlines back to real ones
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    }),
   });
 }
 
