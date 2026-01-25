@@ -19,6 +19,31 @@ export default function MoreActions({ data }: { data: any }) {
     };
 
     const openEditModal = () => {
+        // If karigar payload is present, open karigar editor
+        if (data.karigar) {
+            openModal('EDIT_KARIGAR', {
+                karigar: data.karigar,
+                open: true,
+                onSave: async (updatedKarigar: any) => {
+                    try {
+                        let saved;
+                        // prefer updateKarigar if available, otherwise fall back to addKarigar
+                        if (updatedKarigar.id && (api as any).updateKarigar) {
+                            saved = await (api as any).updateKarigar(updatedKarigar.id, updatedKarigar);
+                        } else {
+                            saved = await api.addKarigar(updatedKarigar);
+                        }
+                        if (typeof data.onUpdated === 'function') data.onUpdated(saved);
+                        closeModal();
+                    } catch (err) {
+                        console.error('Error saving karigar', err);
+                    }
+                }
+            });
+            return;
+        }
+
+        // default: client
         console.log('Opening edit modal for client:', data.client);
         openModal('EDIT_CLIENT', {
             client: data.client,
@@ -45,9 +70,36 @@ export default function MoreActions({ data }: { data: any }) {
     }
 
     const handleDelete = () => {
+        // If karigar and deleteKarigar exists, call it; otherwise only support client deletion
+        if (data.karigar) {
+            if ((api as any).deleteKarigar && data.karigar.id) {
+                openModal('CONFIRM_ACTION', {
+                    title: 'Delete Karigar',
+                    message: `Are you sure you want to delete ${data.karigar.karigarName}? This action cannot be undone.`,
+                    onConfirm: async () => {
+                        try {
+                            const resp = await (api as any).deleteKarigar(data.karigar.id);
+                            console.log('Karigar deleted', resp);
+                            if (typeof data.onDeleted === 'function') data.onDeleted(data.karigar.id);
+                            closeModal();
+                        } catch (err) {
+                            console.error('Error deleting karigar', err);
+                        }
+                    }
+                });
+                return;
+            }
+
+            // deletion not available for karigar via API
+            console.warn('Delete not supported for karigar (no deleteKarigar API)');
+            closeModal();
+            return;
+        }
+
+        // client deletion
         openModal('CONFIRM_ACTION', {
             title: 'Delete Client',
-            message: `Are you sure you want to delete ${data.client.clientName || data.client.name}? This action cannot be undone.`,
+            message: `Are you sure you want to delete ${data.client?.clientName || data.client?.name}? This action cannot be undone.`,
             onConfirm: async () => {
                 try {
                     if (!data.client?.id) {
@@ -81,9 +133,15 @@ export default function MoreActions({ data }: { data: any }) {
                     <IconButton onClick={openEditModal}>
                         <EditIcon />
                     </IconButton>
-                    <IconButton onClick={handleDelete}>
-                        <DeleteIcon />
-                    </IconButton>
+
+
+                    {/* show delete for clients always; for karigars only if deleteKarigar helper exists */}
+                    {(!data.karigar || (api as any).deleteKarigar) && (
+                        <IconButton onClick={handleDelete}>
+                            <DeleteIcon />
+                        </IconButton>
+                    )}
+
                 </div>
             </Popover>
         </div>

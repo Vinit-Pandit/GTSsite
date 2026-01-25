@@ -56,3 +56,13 @@ export async function addKarigar(payload: any) {
 	if (!res.ok) throw new Error(await res.text());
 	return res.json();
 }
+
+export async function deleteKarigar(id: string) {
+	const res = await fetch("/api/deleteKarigar", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ id }),
+	});
+	if (!res.ok) throw new Error(await res.text());
+	return res.json();
+}

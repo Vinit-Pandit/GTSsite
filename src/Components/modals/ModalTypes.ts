@@ -1,1 +1,8 @@
-export type modalType = 'NONE' | 'CONFORM' | 'EDIT_CLIENT' | 'DELETE_PROJECT' | 'VIEW_PROJECT_DETAILS' | 'MORE_ACTIONS';
+export type modalType =
+	| 'NONE'
+	| 'CONFORM'
+	| 'EDIT_CLIENT'
+	| 'EDIT_KARIGAR'
+	| 'DELETE_PROJECT'
+	| 'VIEW_PROJECT_DETAILS'
+	| 'MORE_ACTIONS';

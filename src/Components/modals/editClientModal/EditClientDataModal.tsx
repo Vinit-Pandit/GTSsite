@@ -17,7 +17,7 @@ import "./editClientModal.css";
 
 interface PayloadType {
     open: boolean;
-    client: Client;
+    client: Client | null;
     onClose?: () => void;
     onSave: (updatedClient: Client) => void;
 }
@@ -25,22 +25,24 @@ interface PayloadType {
 const defaultClient: Client = {
     siteName: '',
     clientName: '',
+    mobileNumberOraddress: '',
     siteBill: 0,
-    paymentType: 'CASH' as PaymentTypes,
+    paymentType: 'cash' as PaymentTypes,
     paymentRemaining: 0,
     remarks: '',
-    driveLink: '',
+    paymentDoneBy: '',
+    documentLinkTitle: '',
+    documentDriveLink: '',
     mobileNumber: '',
     address: '',
     architectureOrPMC: '',
-    date: new Date().toISOString(),
+    date: new Date().toISOString().slice(0,10),
 };
 
 export default function EditClientModal({ payload }: { payload: PayloadType }) {
     const [editedClient, setEditedClient] = useState<Client>(defaultClient);
     const [open, setOpen] = useState<boolean>(payload.open);
     const { closeModal } = useModal();
-    console.log("EditClientModal payload:", payload);
 
     useEffect(() => {
         if (payload.client) {
@@ -61,6 +63,7 @@ export default function EditClientModal({ payload }: { payload: PayloadType }) {
 
     const onClose = () => {
         setOpen(false);
+        closeModal();
     }
 
     return (
@@ -71,7 +74,6 @@ export default function EditClientModal({ payload }: { payload: PayloadType }) {
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    // width: 500,
                     bgcolor: "background.paper",
                     boxShadow: 24,
                     p: 4,
@@ -108,7 +110,7 @@ export default function EditClientModal({ payload }: { payload: PayloadType }) {
                     <TextField
                         select
                         label="Payment Type"
-                        value={editedClient.paymentType ?? 'CASH'}
+                        value={editedClient.paymentType ?? 'cash'}
                         onChange={(e) =>
                             handleChange("paymentType", e.target.value as PaymentTypes)
                         }
@@ -139,9 +141,16 @@ export default function EditClientModal({ payload }: { payload: PayloadType }) {
                     />
 
                     <TextField
-                        label="Drive Link"
-                        value={editedClient.driveLink ?? ''}
-                        onChange={(e) => handleChange("driveLink", e.target.value)}
+                        label="Document Title"
+                        value={editedClient.documentLinkTitle ?? ''}
+                        onChange={(e) => handleChange("documentLinkTitle", e.target.value)}
+                        fullWidth
+                    />
+
+                    <TextField
+                        label="Document Drive Link"
+                        value={editedClient.documentDriveLink ?? ''}
+                        onChange={(e) => handleChange("documentDriveLink", e.target.value)}
                         fullWidth
                     />
 
@@ -171,7 +180,7 @@ export default function EditClientModal({ payload }: { payload: PayloadType }) {
                     <TextField
                         label="Date"
                         type="date"
-                        value={editedClient.date ?? new Date().toISOString()}
+                        value={editedClient.date ?? new Date().toISOString().slice(0,10)}
                         onChange={(e) => handleChange("date", e.target.value)}
                         fullWidth
                         InputLabelProps={{ shrink: true }}

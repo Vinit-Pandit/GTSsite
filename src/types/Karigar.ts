@@ -9,6 +9,7 @@ export default interface Karigar {
     bankName?: string,
     paymentAmount: number,
     paymentDate: string,
+    paymentDoneBy?: string,
     remainingAmount: number,
     paymentGivenBy: string,
     documentLinkTitle? : string,
