@@ -1,24 +1,18 @@
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-
-// Optional but recommended: fail fast if env vars are missing
-if (
-  !process.env.FIREBASE_PROJECT_ID ||
-  !process.env.FIREBASE_CLIENT_EMAIL ||
-  !process.env.FIREBASE_PRIVATE_KEY
-) {
-  throw new Error("Missing Firebase Admin environment variables");
-}
+import * as serviceAccount from "./firebaseAdmin/gtsdatabase-49060-firebase-adminsdk-fbsvc-1af5aea24b.json";
 
 if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Convert escaped newlines back to real ones
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    }),
-  });
+  try {
+    initializeApp({
+      credential: cert(serviceAccount as any),
+    });
+
+    console.log("✓ Firebase Admin SDK initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize Firebase Admin SDK:", error);
+    throw error;
+  }
 }
 
 export const db = getFirestore();
